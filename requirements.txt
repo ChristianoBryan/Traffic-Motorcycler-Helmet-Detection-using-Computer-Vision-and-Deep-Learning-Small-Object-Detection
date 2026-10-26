@@ -1,0 +1,7 @@
+ultralytics==8.4.178
+sahi>=0.11
+pycocotools
+pyyaml
+numpy
+pillow
+# torch / torchvision: gunakan yang sudah ada di Colab/Kaggle, atau pasang sesuai GPU Anda (https://pytorch.org)

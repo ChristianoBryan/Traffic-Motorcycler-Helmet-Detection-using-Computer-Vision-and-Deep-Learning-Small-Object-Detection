@@ -1,0 +1,8 @@
+train: D:/The Projects/helmet-sod-yolov8/helmet-sod-yolov8/Dataset Indonesia Upper/train/images
+val: D:/The Projects/helmet-sod-yolov8/helmet-sod-yolov8/Dataset Indonesia Upper/valid/images
+test: D:/The Projects/helmet-sod-yolov8/helmet-sod-yolov8/Dataset Indonesia Upper/test/images
+
+nc: 2
+names:
+  0: WithHelmet
+  1: WithoutHelmet

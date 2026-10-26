@@ -1,0 +1,43 @@
+# Rencana eksperimen deteksi helm objek kecil (YOLOv8s) - 8 Tahap Lengkap.
+# Nilai "$best.xxx" diambil dari blok `best` di bawah. ISI ULANG blok `best` setelah tahap sebelumnya
+# selesai, sesuai hasil terbaik Anda.
+
+defaults:
+  scale: s # n|s|m|l|x
+  epochs: 100
+  batch: 16
+  pretrained: yolov8s.pt # transfer sebagian bobot. Isi `none` untuk dari nol.
+  seeds: [0] # ablation yang serius: [0, 1, 2] lalu laporkan mean +- std
+  loss: { iou: ciou, nwd_ratio: 0.0, nwd_c: 12.8, piou_lambda: 1.2 }
+  attn: none # none|simam|ca|eca|ema
+
+best:
+  imgsz: 960
+  arch: p2
+  loss: { iou: piou2, nwd_ratio: 0.0, nwd_c: 12.8, piou_lambda: 1.2 }
+  attn: simam
+
+experiments:
+  # 1. Run 1: Baseline (Tahap 0) - Pembanding
+  s0_baseline_640: { stage: 0, arch: base, imgsz: 640 }
+
+  # 2. Run 2: Tahap 1 (Resolusi 960) - Dampak resolusi
+  s1_base_960: { stage: 1, arch: base, imgsz: 960 }
+
+  # 3. Run 3: Tahap 2 (P2) - Dampak head P2
+  s2_p2_960: { stage: 2, arch: p2, imgsz: $best.imgsz }
+
+  # 4. Run 4: Tahap 3 saja (PIoU v2, tanpa P2) - Memisahkan efek loss
+  s3_piou2_nop2: { stage: 3, arch: base, imgsz: $best.imgsz, loss: { iou: piou2, nwd_ratio: 0.0, nwd_c: 12.8, piou_lambda: 1.2 } }
+
+  # 5. Run 5: Tahap 2 + 3 dengan PIoU v2 - Rantai utama
+  s4_p2_piou2: { stage: 4, arch: $best.arch, imgsz: $best.imgsz, loss: { iou: piou2, nwd_ratio: 0.0, nwd_c: 12.8, piou_lambda: 1.2 } }
+
+  # 6. Run 6: Tahap 2 + 3 dengan NWD - Rantai utama, pembanding run 5
+  s5_p2_nwd: { stage: 5, arch: $best.arch, imgsz: $best.imgsz, loss: { iou: ciou, nwd_ratio: 1.0, nwd_c: 12.8, piou_lambda: 1.2 } }
+
+  # 7. Run 7: Tahap 2 + 4 (P2 + GFPN) - Memisahkan efek GFPN
+  s6_p2_gfpn: { stage: 6, arch: p2-gfpn, imgsz: $best.imgsz, loss: $best.loss }
+
+  # 8. Run 8: Tahap 2 + 3 (Loss terbaik dari run 5 atau 6) + GFPN + Atensi - Hasil akhir
+  s7_final_full: { stage: 7, arch: p2-gfpn, imgsz: $best.imgsz, loss: $best.loss, attn: $best.attn }

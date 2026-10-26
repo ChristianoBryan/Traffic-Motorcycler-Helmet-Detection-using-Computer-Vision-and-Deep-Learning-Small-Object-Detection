@@ -1,0 +1,54 @@
+from pathlib import Path
+import json
+from ultralytics import YOLO
+
+def fix_existing_results(runs_dir="runs"):
+    runs_path = Path(runs_dir)
+    json_files = list(runs_path.glob("*/seed*/result.json"))
+    
+    if not json_files:
+        print(f"Tidak ditemukan file result.json di dalam folder '{runs_dir}'")
+        return
+
+    print("Memproses ulang validasi untuk menambahkan map50_s & map50_m...")
+
+    for jf in json_files:
+        run_dir = jf.parent
+        best_pt = run_dir / "weights" / "best.pt"
+        
+        if not best_pt.exists():
+            print(f"Skipping {run_dir}: weights/best.pt tidak ditemukan.")
+            continue
+            
+        print(f"Memproses: {run_dir}")
+        
+        # Load data json lama
+        data_json = json.loads(jf.read_text())
+        
+        # Jika sudah ada map50_s, lewati
+        if "map50_s" in data_json:
+            print(f" -> Sudah memiliki map50_s, dilewati.")
+            continue
+
+        try:
+            # Load model YOLO dari bobot yang sudah ada
+            model = YOLO(str(best_pt))
+            
+            # Jalankan validasi menggunakan absolute path helmet.yaml
+            yaml_path = r"D:\The Projects\helmet-sod-yolov8\helmet-sod-yolov8\data\helmet.yaml"
+            metrics = model.val(data=yaml_path, imgsz=data_json.get("imgsz", 640), verbose=False)
+            
+            # Ambil nilai map50_s (index 0) dan map50_m (index 1)
+            maps_list = list(metrics.box.maps) if hasattr(metrics.box.maps, "__iter__") else []
+            data_json["map50_s"] = float(maps_list[0]) if len(maps_list) > 0 else 0.0
+            data_json["map50_m"] = float(maps_list[1]) if len(maps_list) > 1 else 0.0
+            
+            # Simpan kembali file result.json yang sudah diperbarui
+            jf.write_text(json.dumps(data_json, indent=2))
+            print(f" Berhasil! map50_s: {data_json['map50_s']:.4f}, map50_m: {data_json['map50_m']:.4f}")
+            
+        except Exception as e:
+            print(f" Gagal memproses {run_dir}: {e}")
+
+if __name__ == "__main__":
+    fix_existing_results("runs")
